@@ -2,8 +2,10 @@
 %\documentclass[review]{cvpr}
 \documentclass[final]{cvpr}
 
+%\usepackage{ctex}
+\usepackage{bm}
 \usepackage[UTF8]{ctex}
-
+\usepackage{mathrsfs}
 %\usepackage{cvpr}
 \usepackage{times}
 \usepackage{epsfig}
@@ -19,7 +21,8 @@
 \setdescription{itemsep=0pt,partopsep=0pt,parsep=\parskip,topsep=5pt}
 
 
-\usepackage[pagebackref=true,breaklinks=true,colorlinks,bookmarks=false]{hyperref}
+%\usepackage[pagebackref=true,breaklinks=true,colorlinks,bookmarks=false]{hyperref}
+\usepackage[breaklinks=true,colorlinks,bookmarks=false]{hyperref}
 
 
 %\cvprfinalcopy % *** Uncomment this line for the final submission
@@ -63,7 +66,7 @@
 %%%%%%%%% TITLE
 
 \title{卷积神经网络的最新进展\thanks{本文为论文
-\cite{2015Recent}的中文翻译版，译者:郭哲宏。}}
+\cite{2015Recent}的中文翻译版，译者:郭哲宏。由于内容较多，所以在github上持续更新，地址:https://github.com/vabook/paper}}
 
 
 \author{Jiuxiang Gu$^{1}$\quad Zhenhua Wang$^{2}$ \quad Jason Kuen$^{2}$ \quad 
@@ -240,488 +243,205 @@ Clevert等人引入了指数线性单元(ELU)，使深度神经网络的学习�
 \end{equation}
 其中$\lambda$是一个预定义的参数，以控制ELU饱和负输入的值。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-在Koch和Ullman~\cite{85HN/KochVisualAttention}提出的非常有影响力的生物启发模型基础上,
+\subsubsection{Maxout}
+Maxout是一个可选非线性函数，它在每个空间位置上具有多个通道的最大响应。maxout函数定义为$a_{i,j,k}=\max_{k\in[i,K]}z_{i,j,k}$，其中在$z_{i,j,k}$是特征图的第k个通道。值得注意的是，maxout享有ReLU的所有好处，因为ReLU实际上是maxout的一种特殊情况，例如，$\max(w^T_1x+b_1,w^T_2x+b_2)$，其中w1是一个零向量，b1是零。此外，maxout特别适合于Dropout的训练
+\subsubsection{Probout}
+Springenberg等人提出了一种名为probout的maxout的概率变体。它们用概率抽样程序代替了maxout中的最大运算。具体来说，他们首先定义每个k线性单位的概率为:$p_i=e^{\lambda z_i}/\sum^k_{i=1}e^{\lambda z_j}$，其中$\lambda$是控制分布方差的超参数。然后，他们根据多项分布从k个单位中选出一个$\{p1，…， pk\}$，并设置激活值为所选单位的值。为了与dropout相结合，他们实际上重新定义了概率:
+\begin{equation}
+	\hat{p}_0=0.5,\hat{p}_i=e^{\lambda z_j}/(2.\sum^k_{j=1}e^{\lambda z_j})
+\end{equation}
+然后将激活函数采样为
+\begin{eqnarray}a_i=
+\begin{cases}
+	0,&\text{if i = 0} \\
+	z_i,&\text{else}
+\end{cases}
+\end{eqnarray}
+其中$i\sim$多项式\{$\hat{p}_0,...,\hat{p}_k$\}。Probout可以在保持最大输出单元的理想性质和改善其不变性之间取得平衡。然而，在测试过程中，由于附加的概率计算，probout的计算成本比maxout高。
+\subsection{损失函数}
+为特定的任务选择适当的损失函数是很重要的。在本节中我们介绍了四个具有代表性的损失函数:Hinge loss, Softmax loss, Contrastive loss, Triplet loss。
 \begin{figure}[t!]
 	\begin{overpic}[width=\columnwidth]{6.png}
 	\end{overpic}
 	\caption{四种激活函数
 	}\label{fig:relu}
 \end{figure}
-Itti等人~\cite{98pami/Itti}定义了图像的显著性。
-此定义利用了多尺度图像特征的中心-周围的差异来得到。
-Ma和Zhang~\cite{03ACMMM/Ma_Contrast-based}
-提出了另一种局部对比度分析方法来产生显著性图像，并用模糊增长模型对其进行扩展。
-Harel等人~\cite{conf/nips/HarelKP06}通过将Itti等人的特征图归一化来突出显著部分，
-并且可以和其它显著图像结合。
-Liu等人~\cite{10pami/Liu_Learning}通过将高斯图像金字塔的对比度线性结合，
-提出了多尺度对比度。
-最近，Goferman等人~\cite{10cvpr/goferman_context}
-同时对局部底层线索、全局考虑、视觉组织规则以及表层特征进行建模来突出显著性物体。
-这些利用局部对比度的方法倾向于在边缘部分产生高显著性值，
-而不是均匀地突出整个物体(见\figref{fig:cmp1vAll})。
-
-基于全局对比度的显著性区域计算方法用一个区域和整个图像的对比度来计算显著性值。
-Zhai和Shah~\cite{06acmmm/ZhaiS_spatiotemporal}定义了基于某个像素和其余像素点
-对比度的像素级显著性。
-Achanta 等人~\cite{09cvpr/Achanta_FTSaliency}提出了频率调谐方法，
-此方法用某个像素和整个图像的平均色的色差来直接定义显著性值。
-但它该方法只考虑了一阶平均颜色，不足以分析复杂多变的自然图像。
-图~\ref{fig:VisualComparison}和图~\ref{fig:plots}展示了这种方法定性和定量的缺点。
-此外，这些方法忽略了图像各部分间的空间关系，
-而这个因素对可靠的显著性检测来说可能是至关重要的(见\secref{sec:Experiment})。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{基于直方图统计的对比度}\label{sec:HC}
-
-生物视觉研究关于视觉显著性的观察认为，视觉系统对视觉信号的对比度是很敏感的。
-据此，我们基于输入图像的颜色统计特征提出了基于直方图对比度
-(Histogram Contrast, HC)的图像像素显著性值检测方法。
-具体来说，一个像素的显著性值用它和图像中其它像素颜色的对比度来定义。
-例如，图像$I$中像素$I_k$的显著性值定义为：
-\begin{equation}\label{equ:PixelColorContrast}
-    S(I_k) = \sum_{\forall I_i \in I} D(I_k, I_i),
+\subsubsection{Hinge loss}
+Hinge loss通常用于训练大幅度分类器，如支持向量机(SVM)。多类支持向量机的hinge loss定义在\eqref{loss}中，其中w是分类器的权重向量，$y^{(i)}\in[1，. . .， K]$表示它在K个类中正确的类标签。
+\begin{equation}\label{loss}
+	L_{hinge}=\frac{1}{N}\sum_{i=1}^N\sum_{j=1}^K[\max(0,1-\delta(y^{(i)},j)w^Tx_i)]^p
 \end{equation}
-其中 $D(I_k, I_i)$ 为 像素$I_k$ 和像素$I_i$ 在\Lab 空间的颜色距离度量
-(参考~\cite{06acmmm/ZhaiS_spatiotemporal})。
-\equref{equ:PixelColorContrast} 可以按照像素顺序展开为以下形式：
-\begin{equation}\label{equ:PixelCCPixelOrder}
-    S(I_k) = D(I_k, I_1) + D(I_k, I_2) + \cdots + D(I_k, I_N),
+其中$\delta(y^{(i)},j)=1 如果 y^{(i)}=j,否则\delta(y^{(i)},j)=1$，注意如果$p=1$等式\eqref{loss}为Hinge-Loss(L1-Loss)，如果$p=2$,则为Hinge-Loss(L2-Loss)。L2-Loss与L1-Loss比较是可微的，并且对违反边际的点施加更大的损失。有人研究并比较了softmax和L2-SVMs在深度网络中的性能。MNIST的结果表明L2-SVM优于softmax。
+\subsubsection{Softmax Loss}
+
+Softmax Loss是一种常用的损失函数，实质上是多项logistic loss和Softmax的组合。给定一个训练集$\{(x^{(i)}, y^{(i)});i\in1，. . .,N,y^{(i)}\in1，. . ., K\}$，其中$x^{(i)}$为第i个输入图像块,$y^{(i)}$为其K个类中的目标类标签。对第i个输入的第j类的预测用softmax函数进行变换:$p^{(i)}_j=e^{z_j^{(i)}}/\sum_{l=1}^Ke^{z_l^{(i)}}$，其中$z_j^{(i)}$通常是密连接层的激活，因此$z_j^{(i)}$可以写成$z_j^{(i)}=w^T_ja^{(i)}+b_j$。Softmax将预测转化为非负值，并将其归一化，得到类的概率分布。这种概率预测用于计算多项logistic loss，即softmax loss，如下所示:
+\begin{equation}
+	L_{softmax}=-\frac{1}{N}[\sum_{i=1}^N\sum_{j=1}^K\{y^{(i)}=j\}logp_j^{(i)}]
 \end{equation}
-其中 $N$ 为图像 $I$ 的像素数。
-我们可以看到，由于忽略了空间关系，在这种定义下具有相同颜色值得像素具有相同的显著性值。
-因此我们可以对\equref{equ:PixelCCPixelOrder}进行重排，
-使得具有相同颜色值$c_j$的像素归到一起，得到每个颜色的显著性值：
-\begin{equation}\label{equ:PixelCCColorOrder}
-    S(I_k) = S(c_l) = \sum_{j=1}^{n}{f_j D(c_l, c_j)},
+最近，Liu等人提出了大幅度Softmax(L-Softmax)loss，该损失在输入特征向量$a^{(i)}$和权重矩阵的第j列$w_j$之间的角度$\theta_j$引入了一个角幅度。L-Softmax损耗的预测$p^{(i)}_j$定义为:
+\begin{equation}
+	p^{(i)}_j=\frac{e^{\left\|w_j\right\| \left\|a^{(i)}\right\| \psi(\theta_j)}}{e^{\left\|w_j\right\| \left\|a^{(i)}\right\| \psi(\theta_j)} +\sum_{l\neq j}e^{\left\|w_j\right\| \left\|a^{(i)}\right\| \cos(\theta_l)}}
 \end{equation}
-其中$c_l$ 为像素$I_k$的颜色值，$n$为图像中所含的颜色总数，
-$f_j$为$c_j$在图像$I$中出现的概率。
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\mypara{基于直方图的加速}用\equref{equ:PixelColorContrast}
-来朴素地计算图像每个像素显著性值的方法的时间复杂度为$O(N^2)$。
-对于中等图像来说，计算代价已经非常高了。
-上述公式的等价表示\equref{equ:PixelCCColorOrder}花费$O(N) + O(n^2)$ 的时间。
-如果 $O(n^2) \leq O(N)$，时间复杂度可以改进到$O(N)$。
-因此，加速的关键在于减少图像像素颜色的总数。
-然而，真彩色空间包含$256^3$种可能的颜色，比图像的像素总数多很多。
-
-Zhai和Shah~\cite{06acmmm/ZhaiS_spatiotemporal}仅仅用了亮度来减少颜色的数量 $n$。
-这种方法得到的$n^2=256^2$($256^2 \ll N$)。
-然而，他们的方法的缺陷在于忽略了颜色信息的可区别性。
-
-
-\begin{figure}
-  	\begin{overpic}[width=\columnwidth]{histogram.pdf}
-    \end{overpic}
-    \caption{给定一个输入图像(左)，我们计算其颜色直方图(中)。
-        直方图中每一个bin所对应的颜色在下方的横条中显示。
-        量化后的图像仅仅使用$43$个直方图bin的色彩，
-        且仍然保留了显著性检测所需的足够的视觉质量。
-    }\label{fig:colorFre}
-\end{figure}
-
-
-在这个的工作中，我们用全色彩空间来代替仅用亮度的方法。
-为了减少需要考虑的颜色数目，我们先将每个通道的颜色量化得到12个不同的值，
-这会将颜色数量减少到$12^3=1728$。
-考虑到自然图像中的颜色只占据整个色彩空间很小的一部分，
-我们可以将出现频率较小的颜色丢掉以减少色彩数目。
-通过选择高频出现的颜色，并确保这些颜色覆盖$95\%$以上的像素，
-我们可以做到将颜色数目减少到$n=85$左右(实验结果详见\secref{sec:Experiment} )。
-剩下的小于$5\%$的像素所占的颜色被直方图中距离最近的颜色所代替。
-\figref{fig:colorFre}为典型的量化样例。
-请再次注意，基于时间性能的考虑，
-我们用简单的基于直方图的量化方法来代替优化一幅图像的特定颜色。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-\mypara{颜色空间平滑}
-虽然我们可以用颜色量化后的颜色直方图来高效计算颜色对比度，但量化本身可能会产生瑕疵。
-因为一些相似的颜色可能被量化为不同的值。
-为了减少这种随机性给显著性值计算带来的噪声，我们用平滑操作来改善每个颜色的显著性值。
-每个颜色的显著性值被替换为相似颜色(用\Lab 距离测量)显著性值的加权平均。
-这个过程实质上是颜色空间的一种平滑过程。
-我们选择$m=n/4$个最近邻颜色来改善颜色$c$的显著性值，见公式：
-\begin{equation}\label{equ:smoothing}
-    S'(c) = \frac{1}{(m-1)T} \sum_{i=1}^{m} (T-D(c, c_i))S(c_i)
+\begin{equation}
+	\psi(\theta_j)=(-1)^k\cos(m\theta_j)-2k,\theta_j\in[k\pi/m,(k+1)\pi/m]
 \end{equation}
-其中 $T=\sum_{i=1}^{m} D(c, c_i)$ 为颜色 $c$和它的$m$ 个最近邻$c_i$之间的距离，
-归一化因数由以下公式得到：
-\begin{equation*}\label{equ:smoothingN}
-    \sum_{i=1}^{m} (T-D(c, c_i))=(m-1)T.
-\end{equation*}
-我们用了一个线性变化平滑权值$(T-D(c, c_i))$来为在颜色特征空间中距离
-$c$ 较近的颜色分配较大权值。
-在我们的实验中，我们发现这种线性变化的权值比急剧下降的高斯权值的效果好。
-\figref{fig:HCSmoothing}为颜色空间平滑后的效果，按显著性值降序排列。
-注意到相似的直方图区间在平滑过后会非常接近，表明相似的颜色非常可能分配到相似的显著性值，
-因此减少了量化的瑕疵(见 \figref{fig:plots})。
-
-
-\mypara{实现细节}
-为了将颜色空间量化为$12^3$种不同的颜色，我们统一将每个颜色的通道划分为12个等级。
-虽然颜色量化在 RGB 颜色空间进行，
-但为了颜色距离计算与人类感知更加符合，我们在 \Lab 颜色空间来测量颜色的距离。
-我们并不直接在\Lab 颜色空间进行量化，因为并不是所有在区间$L^*\in[0, 100]$，
-$a^*, b^*\in[-127,127]$中的颜色都对应真实的颜色。
-实验结果表明，直接在 \Lab 空间量化得到效果并不好。
-最佳结果是在 RGB 颜色空间量化，在\Lab 颜色空间测量距离得到的。
-
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{histogram_saliency.pdf}
-    \caption{颜色空间平滑前(左)后(右)像素颜色的显著性值
-        (归一化到$[0, 1]$)。
-        对应的显著性图在各自的内嵌插图中显示。
-    }\label{fig:HCSmoothing}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{基于区域的对比度}
-
-\begin{figure}[b]
-    \centering
-    \includegraphics[width=\columnwidth]{region_contrast.pdf}\\
-    \caption{由Felzenszwalb和Huttenlocher的分割方法
-        \cite{04ijcv/felzenszwalb_efficient}得到的图像区域(左)，
-        考虑(中-右)和不考虑(中-左)距离权值分别得到的区域对比度。
-        通过考虑空间关系，我们得到的高质量的重要性分割结果(右)可以和人工分割结果相比。
-    }\label{fig:regContrast}
-\end{figure}
-
-
-\begin{figure*}[t]
-   \begin{overpic}[width=\textwidth]{comparison.pdf} \small
-   \put(3,0){(a)~original}
-   \put(18.5,0){(b)~LC}
-   \put(33,0){(c)~CA}
-   \put(48,0){(d)~FT}
-   \put(60,0){(e)~\HC}
-   \put(74,0){(f)~\RC}
-   \put(90,0){(g)~RCC}
-   \end{overpic}
-   \caption{显著性图的视觉效果对比。(a)原图，由以下方法产生的显著性图
-       (b) Zhai和Shah\cite{06acmmm/ZhaiS_spatiotemporal},
-       (c) Goferman等\cite{10cvpr/goferman_context},
-       (d) Achanta等\cite{09cvpr/Achanta_FTSaliency},
-       (e) 我们的HC和(f)RC方法，和(g)基于RC图的显著性区域分割结果.
-       我们的方法的结果均匀的突出整个显著性区域。
-       整个数据集上的所有检测结果可以从我们的项目主页上获取。
-   }\label{fig:VisualComparison}
-\end{figure*}
-
-
-人们会更加注意到图像中和周围物体对比度非常大的区域
-\cite{03neuroscience/luminanceContrast}。
-除了对比度之外，空间关系在人类注意力方面也起到非常大的作用。
-相邻区域的高对比度比很远区域的高对比度更容易导致一个区域引起视觉注意。
-在计算像素级对比度时引进空间关系计算代价会非常大，
-我们引进一种对比度分析方法：\emph{区域对比度} (Region Contrast, RC)，
-以此来将空间关系和区域级对比度计算结合到一起。
-在RC方法中，我们首先将图像分割成若干区域，
-然后计算区域及颜色对比度，再用每个区域和其它区域对比度加权和来为此区域定义显著性值。
-权值由区域空间距离决定，较远的区域分配较小的权值。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\mypara{用稀疏直方图比较来计算区域对比度}
-首先，我们用基于图的图像分割方法将输入图像分割成若干区域
-\cite{04ijcv/felzenszwalb_efficient}。
-然后为每个区域建立颜色直方图\secref{sec:HC}。
-对每个区域$r_k$，我们通过测量它与图像其它区域的颜色对比度来计算它的显著性值，
-\begin{equation}\label{equ:regContrastSaliency}
-    S(r_k) = \sum_{r_k \neq r_i} w(r_i)  D_r(r_k, r_i),
+其中$k\in[0,m-1]$是一个整数，m控制类之间的幅度。当m = 1时，L-Softmax loss减小到原来的softmax loss。通过调整类间的幅度m，定义一个相对困难的学习目标，可以有效避免过拟合。他们验证了L-Softmax对MNIST、CIFAR-10和CIFAR-100的有效性，并发现L-Softmax的损耗性能优于原softmax。
+\subsubsection{Contrastive Loss}
+Contrastive Loss通常用于训练Siamese网络，这是一种弱监督方案，用于从标记为匹配或非匹配的成对数据实例中学习相似性度量。已知第i对数据$(x^{(i)}_\alpha，x^{(i)}_\beta)$，设$(z^{(i,l)}_\alpha，z^{(i,l)}_\beta)$表示第l层$(l\in[1，···，l])$对应的输出对。在一篇论文中它们将图像对通过两个相同的CNN，并将最后一层的特征向量提供给cost模块。他们训练样本使用的对比损失函数为:
+\begin{equation}
+	L_{contrastive}=\frac{1}{2N}\sum_{i=1}^N(y)d^{i,L}+(1-y)max(m-d^(i,L),0)
 \end{equation}
-其中$w(r_i)$为区域$r_i$的权值，$D_r(\cdot, \cdot)$为两个区域的颜色距离度量。
-这里我们用 $r_i$里的像素数$w(r_i)$ 来强调大区域的颜色对比度。
-两个区域$r_1$和$r_2$的颜色距离为：
-\begin{equation}\label{equ:regContrast}
-    D_r(r_1, r_2) = \sum_{i=1}^{n_1} \sum_{j=1}^{n_2} f(c_{1,i}) f(c_{2,j}) D(c_{1,i}, c_{2,j})
+其中$d(i,L)=\left\|z_\alpha^{i,L}-z^{i,L}_\beta\right\|_2^2$，m是影响非匹配对的边界参数。如果$(x x^{(i)}_\alpha，x^{(i)}_\beta)$是一个匹配对，则y = 1。否则，y = 0。Lin等人发现，当对所有对进行微调时，这种单一的边际损失函数会导致检索结果的急剧下降。同时，仅对非匹配对进行微调时，性能得到了较好的保留。这表明丢失是由loss函数中对匹配对的处理造成的。虽然仅对非匹配对的召回率是稳定的，但对匹配对的处理是召回率下降的主要原因。为了解决这一问题，他们提出了一个双幅度损失函数，该函数增加了另一个幅度参数来影响匹配对。不是计算最后一层的损失，而是为每一层l定义它们的对比损失，并同时执行单个层的损失的反向传播。它被定义为:
+\begin{equation}
+\begin{split}
+	L_{contrastive}=\frac{1}{2N}\sum_{i=1}^N\sum_{i=1}^L(y)max(d^{i,L}-m_{1,0})\\
+	+(1-y)max(m_2-d^{(i,L)},0)
+\end{split}
 \end{equation}
-其中$f(c_{k,i})$为第$i$个颜色$c_{k,i}$在第$k$个区域$r_k$的所有$n_k$种颜色中
-出现的概率，$k=\{1,2\}$。
-注意到我们使用区域的概率密度函数(即归一化的颜色直方图)中颜色出现概率作为权值，
-以强调主要的颜色之间的区别。
-
-因为每个区域只包含图像的直方图中很少数目的颜色，
-所以为每个区域存储和计算常规矩阵形式的直方图是低效的。
-我们用稀疏直方图以使得存储和计算过程更加高效。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{table*}
-    \centering
-    \begin{tabular}{l|c|c|c|c|c|c|c|c|c|c} \hline\hline
-      方法  &  \IT   &  \MZ  &   \GB  &  \SR   &  \FT  &  \AC  &  \CA   & \LC   &  HC   &  RC   \\ \hline
-      时间(秒) & 0.611  & 0.070 & 1.614  & 0.064  & 0.016 & 0.109 &  53.1  & 0.018 & 0.019 & 0.253 \\ \hline
-      代码类型    & Matlab & C++   & Matlab & Matlab &  C++  &  C++  & Matlab &  C++  &  C++  &  C++  \\ \hline\hline
-    \end{tabular}
-    \caption{计算Achanta等人数据集\cite{09cvpr/Achanta_FTSaliency}中图像的平均用时。
-        该数据集（参见我们主页）中大部分的图像分辨率为$400\times300$。
-        这里所示的所有方法的时间是在一个拥有Dual Core 2.6 GHz
-        CPU，2GB内存的机器上测得的。
-    } \label{tab:TimeEfficency}
-\end{table*}
-
-
-\mypara{空间加权区域对比度 }
-更进一步，通过在\equref{equ:regContrastSaliency}中引进空间权值，
-我们将空间信息加入进来，来增加区域的空间影响效果。
-近邻的区域增大影响，较远的区域减小影响。
-特别地，对任意区域 $r_k$，基于空间加权区域对比度的显著性定义为：
-\begin{equation}\label{equ:regContrastSpatial}
-    S(r_k)=\sum_{r_k\neq r_i}\exp({-D_s(r_k,r_i)/\sigma_s^2})w(r_i) D_r(r_k, r_i)
+在实践中，他们发现这两个边缘参数可以设置为相等$(m1= m2= m)$，可以通过采样匹配和非匹配图像对的分布来学习。
+\subsubsection{Triplet Loss}
+Triplet Loss考虑每个损失函数的三个实例。三元组单元$(x^{(i)}_a,x^{(i)}_p, x^{(i)}_n)$通常包含一个锚实例$x_a^{(i)}$以及来自$x_a^{(i)}$同一类正向实例$x_p^{(i)}$和一个反向实例$x_n^{(i)}$。让$(z_a^{(i)},z_p^{(i)},z_n^{(i)})$表示为三元体单元的特征,Triplet Loss被定义为:
+\begin{equation}
+	L_{triplet}=\frac{1}{N}\sum_{i=1}^N\max\{d_{(a,p)}^{(i)}-d_{(a,n)}^{(i)}+m,0\}
 \end{equation}
-其中 $D_s(r_k, r_i)$ 为区域$r_k$ 和 $r_i$的空间距离，$\sigma_s$控制空间权值强度。
-$\sigma_s$ 越大，空间权值的影响越小，导致较远区域的对比度会对当前区域显著性值做出较大的贡献。
-两个区域的空间距离定义为两个区域重心的欧氏距离。在我们的试验中，$\sigma_s^2 = 0.4$，像素坐标归一化到$[0, 1]$区间。
+其中$d_{(a,p)}^{(i)}=\left\|z_a^{(i)}-z_p^{(i)}\right\|_2^2 = \left\|z_a^{(i)}-z_n^{(i)}\right\|_2^2$。Triplet Loss的目的是使锚点与正向之间的距离最小，而使负向与锚点之间的距离最大。
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{实验比较}\label{sec:Experiment}
-
-
-我们在Achanta等人提供的公开测试集\cite{09cvpr/Achanta_FTSaliency}上测试了我们的方法。
-据我们所知，此测试集是此类数据最大的测试集，并且由人工精确标注了显著性区域。
-我们将基于全局对比度的方法与其它$8$个当今最好的方法进行了比较。
-仿照\cite{09cvpr/Achanta_FTSaliency}，我们依据以下几个方面来选择其它方法来进行对比：
-引用数(\IT ~和 \SR)、较新的方法(\GB, SR, \AC, \FT ~and \CA)、
-多种类(IT 为生物驱动, \MZ~为纯计算, GB 为两者混合的， SR 在频域进行处理,
-AC and FT 输出全分辨率显著性图)，和我们方法最接近的(\LC)。
-
-
-我们的方法和其它的方法在1000张图片上计算得到了显著性图。
-\tabref{tab:TimeEfficency} 比较了每个方法的平均用时。
-我们的方法HC和RC用C++实现，对于IT、GB、SR、FT和CA，我们引用了作者的实现。
-由于找不到LC作者的源码，我们用C++来实现了此算法。
-对于典型自然图片，HC 方法时间复杂度为 $O(N)$，对于实时应用已经非常高效。
-相比之下，RC需要图像分割~\cite{04ijcv/felzenszwalb_efficient}，
-所以较慢，但它产生更好的效果。
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{plots.pdf}
-  \caption{在包含1000副图像的公开测试集上各种方法检测得到的显著性图经过
-      简单阈值分割得到结果的正确率召回率曲线。
-      左图和中图是我们方法不同配置与\GB, \MZ,  \FT, \IT, \SR, \AC, \CA,和\LC
-      等方法的比较。
-      NHC代表我们HC方法不带颜色空间平滑，NRC代表我们RC方法不带空间加权。
-      右图是我们显著性区域分割方法以不同的显著性图作为初始值得到的正确率召回率柱状图。
-      我们的RC方法在1000副图像数据集上的结果具高的精度，召回率和$F_{\beta}$值。
-      (相关的结果图像从我们的项目主页上可以得到。)
-  } \label{fig:plots}
-\end{figure*}
-
-为了全面的测试我们提出的方法的准确性，我们用了两种不同的客观比较方法进行了试验。
-在第一个实验中，为了分割显著性物体并计算准确率召回率曲线，
-我们参考\cite{09cvpr/Achanta_FTSaliency}，用所有阈值分别将显著性图进行二值化。
-在第二个试验中，我们用显著性图像初始化后迭代应用GrabCut方法
-\cite{04tog/rother_grabcut}进行显著性物体分割。
-我们还将得到的显著性图作为内容敏感的图像缩放和非真实感渲染的重要性权值。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\mypara{固定阈值的分割}
-得到显著性物体的二值分割的最简单方法就是设定一个$T_f \in [0, 255]$的阈值。
-为了可靠地比较多样的显著性检测方法高亮显著性物体的效果，
-我们将阈值$T_f$设定为在$0$到$255$之间变化。\figref{fig:plots}为精确度召回率曲线结果。
-我们还介绍了加入色彩空间平滑以及空间权值后的效果以及与其它方法的比较。
-这些方法得到的显著性图的视觉直观比较在图~\ref{fig:cmp1vAll}
-和图\ref{fig:VisualComparison}中。
-
-正确率、召回率曲线清楚地展示出我们的方法优于其它的八种方法。
-曲线的极限很有趣：在$T_f=0$处召回值最大，所有的像素被认为是前景，
-所以所有的方法得到相同的正确值和召回值；这点的正确值为$0.2$，召回值为$1.0$。
-这表明，在标注数据中，平均$20\%$的图像像素属于显著性区域。
-曲线另一端，我们的方法的最小召回值比其它方法高，
-因为我们的显著性图更加平滑，且包含更多显著性值为$255$的像素。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\mypara{显著性分割}
-我们考虑将计算所得的显著性图像用于帮助显著物体分割。
-在已有的工作中，显著性图已经被用于非监督物体分割：Ma和Zhang\cite{03ACMMM/Ma_Contrast-based}
-通过在显著性图上进行模糊区域增长来找到矩形显著的区域。
-Ko和Nam\cite{06josa/KoN_InterestSegmentation}在图像线段特征上训练支持向量机，
-然后将这些区域聚类来提取显著性物体。
-Han等人\cite{06TCSVT/han_unsupervised}用颜色、纹理和边缘特征建立马尔可夫
-随机场模型，用显著性图的种子值来增长显著性物体区域。
-最近，Achanta 等人~\cite{09cvpr/Achanta_FTSaliency}先通过mean-shift分割得到图像区域，
-然后再图像区域内对显著性值进行平均，
-再通过识别平均显著性值大于整个图像平均显著性值的2倍的图像区域来确定显著性区域。
-
-\begin{figure}[b]
-    \includegraphics[width=\columnwidth]{saliency_cut.pdf}
-    \caption{显著性区域分割。从左到右依次是：初始分割结果、第一次迭代后的trimap，
-          第二次迭代后的trimap，最终分割结果，用户标注的基准数据。
-          在分割图中，蓝色代表前景，灰色是背景。
-          在trimap中，红色是前景，绿色是背景，未知区域为原图颜色。
-    }\label{fig:AttCutSteps}
-\end{figure}
-
-\begin{figure*}
-  \begin{overpic}[width=\linewidth]{cut_compare.pdf}\small
-    \put(3,0){(a)~original}
-    \put(17,0){(b)~\LC}
-    \put(32,0){(c)~\CA}
-    \put(46,0){(d)~\FT}
-    \put(60,0){(e)~\HC}
-    \put(74,0){(f)~\RC}
-    \put(87,0){(g)~ground truth}
-  \end{overpic}
-  \caption{用不同显著性图初始化显著性分割的结果。相应的显著性图在
-    \figref{fig:VisualComparison}中.
-  }\label{fig:cutCmp}
-\end{figure*}
-
-在我们的方法中，我们迭代应用GrabCut \cite{04tog/rother_grabcut} 来改善二值化显著性
-图像后得到的分割结果(见\figref{fig:AttCutSteps})。
-传统的GrabCut方法是由人工选中矩形区域来进行初始化操作，
-而我们用一个固定阈值二值化后的显著性图来得到显著性分割，
-并用这个显著性分割来自动地进行GrabCut初始化。
-这个阈值的我们经验性的选择固定阈值实验中与$95\%$召回率对应的阈值。
-
-
-初始化之后，我们迭代运行GrabCut来改进显著性分割结果(在我们的实验中最多迭代 $4$ 次)。
-在每一次迭代后，我们用膨胀和腐蚀操作来得到新的Trimap以进行下一次迭代。
-如\figref{fig:AttCutSteps}所示，膨胀后仍然落在外面的区域设置成背景，
-在腐蚀区域内的设置成前景，其余的区域为Trimap中的未知。
-Grubcut本身是用高斯混合模型和Grapcut进行迭代，来改善每一步的区域分割效果，
-靠近初始显著性物体区域的部分成为显著性物体的几率更大。
-因此，我们的新的初始化方法可以使GrabCut包含显著性区域附近的显著性区域，
-并根据颜色特征的差异排除非显著性区域。
-在算法实现中，我们设置了狭窄的图像边界区域(15像素宽)作为背景来提高边界区域的收敛速度。
-
-
-\figref{fig:AttCutSteps}展示了我们显著性分割算法的两个实例。
-在旗子的例子中，不需要的区域被正确地排除；
-在花朵的例子中，我们的方法扩展了初始显著性区域并收敛得到了精确的分割结果。
-为了保持一致性，我们用召回率$95\%$的阈值对显著性图像进行二值化(见\figref{fig:plots})。
-我们在基准数据集~\cite{09cvpr/Achanta_FTSaliency}上比较了平均正确率，召回率以及
-$F$-测量，其中$F$-测量定义为：
-\begin{equation}\label{equ:FMeasure}
-    F_{\beta}= \frac{(1+\beta^2)Precision \times
-        Recall}{\beta^2 \times Precision + Recall}.
+但在某些特殊情况下，随机选取的锚点样本可能会判断错误。例如，当$d_{(n,p)}^{(i)}<d_{(a,p)}^{(i)}< d_{(a,n)}^{(i)}$时，三元组损失可能仍然为零。因此，在反向传播过程中，将忽略三元组单元。Liu等人提出耦合簇损失(Coupling Clusters, CC)来解决这一问题。耦合簇损失函数是在正集和负集上定义的，而不是使用三元组单元。将随机选取的锚点替换为聚类中心，使正集的样本聚在一起，而负集的样本相对远离，比原来的三元组损失更可靠。耦合簇损失函数定义为:
+\begin{equation}
+	L_{cc}=\frac{1}{N^p}\sum_{i=1}^{N^p}\frac{1}{2}\max\{ \left\|z^{(i)}_p-c_p\right\|_2^2
+	-\left\|z^{(*)}_n-c_p\right\|_2^2 +m,0\}
 \end{equation}
+其中$N^p$是每个集合的样本数，$z^{(*)}_n$是$x^{(*)}_n$的特征表示，$x^{(*)}_n$是离估计中心点$c_p=(\sum_i^{N^p}z_p^{(i)})/N^p$最近的负样本。三元组损失及其变体被广泛应用于各种任务中，包括再识别、验证和图像检索。
 
-和Achanta等人\cite{09cvpr/Achanta_FTSaliency}一样，
-我们用$\beta^2=0.3$来使正确率的权重高于召回率。
-可以从比较结果(见\figref{fig:plots}-右和\figref{fig:cutCmp})中看出，
-用我们的 RC 和 HC 显著性图来进行分割明显优于其它方法。
-和当今最好的方法相比(正确率=$75\%$, 召回率=$83\%$)，我们方法的结果更精确
-(正确率=$90\%$, 召回率=$90\%$)。
-(我们的演示程序可以从项目主页中得到。)
+\subsubsection{Kullback-Leibler Divergence}
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}[t!]
-   \begin{overpic}[width=\columnwidth]{contentAware_application.pdf} \small
-   \put(3,0){original}
-   \put(21,0){CA}
-   \put(31,0){RC}
-   \put(48,0){original}
-   \put(75,0){CA}
-   \put(90,0){RC}
-    \end{overpic}
-    \caption{用\CA 和我们的RC显著性图进行内容敏感的图像缩放
-        \cite{09cgf/ZhangC}的结果比较。
-    }\label{fig:Resizing}
-\end{figure}
-
-
-\mypara{基于内容感知的图像缩放}
-在内容敏感的图像缩放中，显著性图像经常用来指定图像的相对重要区域
-(见~\cite{09_image_resize})。
-我们用提取出的显著性图像进行了图像缩放实验。
-实验中采用了Zhang等人提出的\cite{09cgf/ZhangC}内容敏感图像缩放方法
-\footnote{我们采用作者公开的代码}。
-该方法通过变形能量将变形分配到相对非显著性区域，同时保持全局和局部的图像特征。
-\figref{fig:Resizing}比较了用\RC 和\CA 显著性图像得到的图像缩放结果。
-显著性物体区域的显著性值是成片光滑的，这点对于基于能量的缩放非常重要，
-因此我们的 RC 显著性图产生更好的缩放结果。
-CA显著性图像在物体的边界有更高的显著性值，但这并不适于图像缩放等应用，
-这些应用要求整个显著性物体一致的被突出。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\mypara{非真实感渲染}
-艺术家们经常对图像抽象并突出有意义的部分并掩盖非重要区域\cite{99/zeki_innerVision}。
-受此现象启发，一系列用显著性值来进行非真实感渲染的方法产生，
-并产生了有趣的结果~\cite{02tog/decarlo_stylization}。
-我们将我们的方法和最近的杰出的显著性检测方法~\cite{09cvpr/Achanta_FTSaliency}用在NPR
-技术\cite{10pg/Huang_Zhang}上进行了比较(见\figref{fig:NPR})。
-我们的\RC 提供更好的掩模，这可以帮助NPR方法更好地保留重要图像部分以及区域边界的细节，
-同时平滑其它部分。
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}[t!]
-   \begin{overpic}[width=\columnwidth]{npr_application2.pdf} \small
-     \end{overpic}
-    \caption{(左，右)~\FT 和RC显著性图分别被用于风格化绘制\cite{10pg/Huang_Zhang}。
-        我们的方法生成了更好的显著性图，是的风格化绘制保持了重要部分的细节。例如马头
-        和栏杆部分细节更好的保留了。
-    }\label{fig:NPR}
-\end{figure}
-
+Kullbeck-Leibler Divergence(KLD)是两个概率分布$p(x)$和$q(x)$在同一个离散变量x上差异的非对称度量(见\figref{fig:KLD}(a))。从$q(x)$到$p(x)$的KLD定义为:
+\begin{equation}
+	D_{KL}(p\|q)=-H(p(x))-E_p[\log q(x)] 
+\end{equation}
+\begin{equation}
+	=\sum_xp(x)\log p(x)-\sum_xp(x)\log q(x)=\sum_xp(x)\log\frac{p(x)}{q(x)}
+\end{equation}
+其中$H(p(x))$是p(x)的香农熵，$Ep(\log q(x))$是$p(x)$和$q(x)$的交叉熵。
 
 \begin{figure}[t!]
-   \begin{overpic}[width=\columnwidth]{challenging_maps.pdf} \small
-     \end{overpic}
-    \caption{对于我们提出的基于直方图的方法来说一个有挑战性的例子：（上图）显著性区域和
-        非显著性区域具有相似的颜色，（下图）图像具有复杂的纹理背景。
-        从左到右依次是输入图像、HC显著性图、HC显著性区域分割、RC显著性图、 RC显著性区域分割.
-    } \label{fig:challenging_maps}
+	\begin{overpic}[width=\columnwidth]{7.png}
+	\end{overpic}
+	\caption{KLD
+	}\label{fig:KLD}
 \end{figure}
 
+KLD被广泛用于各种自动编码器(AEs)的目标函数中作为信息损失的度量。自动编码器的著名变种包括稀疏自动编码器，去噪声自动编码器和变分自动编码器(VAE)。VAE通过贝叶斯推理解释潜在表征。它由两部分组成:编码器将数据样本x压缩为潜在表征$z \sim q_\phi(z|x)$;以及一个解码器，该解码器将这样的表示映射回尽可能接近输入的数据空间$\hat{x}\sim p_\theta(x|z)$。其中$\phi$为编码器参数，$\theta$为解码器参数。在一篇论文中，VAEs试图最大化$\log p(x|\phi,\theta)$的对数似然的变分下界:
+\begin{equation}
+	L_{vae}=E_{z\sim q_\phi(z|x)}[\log p_\theta(x|z)]-D_{KL}(q_\phi(z|x)\|p(z))
+\end{equation}
+其中第一项是重建成本，KLD项强制对分布$q\phi(z|x)$施加先验$p(z)$。通常$p(z)$是标准正态分布，离散分布，或一些具有几何解释的分布。继最初的VAE之后，许多变种已经被提出。条件VAE(CVAE)从条件分布中使用$\hat{x}\sim p_\theta(x|y,z)$生成样本。去噪VAE(DVAE)从损坏的输入$\hat{x}$中恢复原始输入x。
+
+Jensen-Shannon Divergence (JSD)是KLD的对称形式。它衡量了$p(x)$和$q(x)$之间的相似性:
+\begin{equation}
+\begin{split}
+	D_{JS}(p||q)=\frac{1}{2}D_{KL}\left(p(x)||\frac{p(x)+q(x)}{2}\right)+\\
+	\frac{1}{2}D_{KL}\left(q(x)||\frac{p(x)+q(x)}{2}\right)
+\end{split}
+\end{equation}
+
+通过最小化JSD，我们可以使$p(x)$和$q(x)$两个分布尽可能接近。JSD已成功应用于生成对抗网络(GANs)。与直接建模x和z之间关系的VAEs不同，GANs被明确地设置为优化生成任务。GANs的目标是找到能在真实数据和生成数据之间给出最佳区分的鉴别器D，同时鼓励生成器G拟合真实数据分布。鉴别器D和生成器G之间的最小-最大博弈被以下目标函数形式化:
+\begin{equation}\label{gan}
+	\begin{split}
+	\substack{\min \\G}\substack{\max \\D}\mathcal{L}_{gan}(D,G)=E_{x\sim p(x)}[\log D(x)]+ \\
+	E_{z\sim q(z)}[\log(1-D(G(z)))]
+\end{split}
+\end{equation}
+最初的GAN论文表明，对于固定生成器$G^*$，我们有最优鉴别器$D^∗G(x) =\frac{p(x)}{p(x)+q(x)}$。那么方程\eqref{gan}等价于使JSD在$p(x)$和$q(x)$之间最小化。如果G和D有足够的容量，分布$q(x)$收敛于$p(x)$。与条件式VAE一样，条件式GAN(CGAN)也接收额外的信息y作为输入，以生成约束y的样本。在实践中，众所周知，GANs在训练时是不稳定的。
+\subsection{Regularization}
+在深度神经网络中，过拟合是一个不可忽视的问题，通过正则化可以有效地降低过拟合。在下面的小节中，我们将介绍一些有效的正则化技术:$\ell_p$-norm，Dropout和DropConnect。
+\subsubsection{$\ell_p$-norm Regularization}
+正则化通过增加额外的项来修改目标函数，以减少模型的复杂性。形式上，如果损失函数为$\mathcal{L}(\theta,x,y)$，则正则化损失为:
+\begin{equation}
+	E(\theta,x,y)=\mathcal{L}(\theta,x,y)+\lambda R(\theta)
+\end{equation}
+其中$R(\theta)$是正则化项，$\lambda$是正则化强度。
+
+$\ell_p$-norm正则化函数通常采用$R(\theta) =\sum_j||\theta_j||_p^p$，当$P\geq1$时，$\ell_p$-norm是凸的，使优化更容易，使该函数具有吸引力。对于p=2， $\ell_p$-norm正则化通常被称为权重衰减。$\ell_p$-norm的一个更有原则的替代方案是Tikhonov正则化，它奖励对输入噪声的不变性。当p<1时，$\ell_p$-norm正则化更多地利用了权值的稀疏性，但对非凸函数有一定的作用。
+\subsubsection{Dropout}
+Dropout首先是由Hinton等人引入的，已经被证明在减少过拟合方面非常有效。在他们的论文中，他们对完全连接的层应用Dropout。Dropout的输出是$y = r∗a(W^T\bm{x})$，其中$\bm{x} = [x_1, x_2，…,x_n]^T$是全连接层的输入，$W\in R^{n\times d}$是一个权值矩阵，$\bm{r}$是一个大小为d的二进制向量，其元素是由参数为p的伯努利分布独立得出的，即$r_i\sim Bernoulli(p)$。Dropout可以防止网络过于依赖任何一个神经元(或任何一个小的神经元组合)，并且可以迫使网络在缺乏特定信息的情况下保持准确。已经提出了几种改进Dropout的方法。Wang等人提出了一种快速Dropout方法，该方法可以通过采样或积分高斯近似来进行快速Dropout训练。Ba等人[91]提出了一种自适应Dropout方法，其中每个隐藏变量的Dropout概率使用与深度网络共享参数的二进制网络来计算。在论文中，他们发现在1 × 1卷积层之前使用标准的Dropout一般会增加训练时间，但不能防止过拟合。因此，他们提出了一个名为SpatialDropout的新Dropout方法，它将Dropout值扩展到整个特征图。这种新的Dropout方法尤其适用于训练数据量较小的情况。
+\subsubsection{DropConnect}
+DropConnect将Dropout的理念更进一步。DropConnect不是将神经元的输出随机设置为零，而是将权重矩阵$\bm{W}$的元素随机设置为零。DropConnect的输出由$y=a((R*W)x)$给出，其中$R_{i,j}\sim Bernoulli(p)$。此外，在训练过程中，偏差也被掩盖了。\figref{fig:drop}说明了No-Drop，Dropout和DropConnect网络之间的差异。
+\begin{figure}[t!]
+	\begin{overpic}[width=\columnwidth]{8.png}
+	\end{overpic}
+	\caption{三种网络的描述
+	}\label{fig:drop}
+\end{figure}
+\subsection{最优化}
+在本小节中，我们将讨论优化CNNs的一些关键技术。
+\subsubsection{数据增强}
+深层的CNNs特别依赖于大量训练数据的可用性。与CNNs中涉及的参数数量相比，一个缓解数据相对稀缺的优雅解决方案是数据增强。数据增强包括将可用数据转换为新数据而不改变其性质。流行的增强方法包括简单的几何变换，如采样、镜像、旋转、移动和各种光度变换。Paulin等人提出了一种贪婪策略，从一组候选变换中选择最佳变换。然而，他们的策略涉及大量的模型再训练步骤，当候选转换的数量很大时，这在计算上是昂贵的。Hauberg等人提出了一种优雅的方法，通过随机生成微分态来进行数据增强。Xie等人和Xu等人提供了从互联网收集图像的额外方法，以改善细粒度识别任务中的学习。
+\subsubsection{权重初始化}
+深层的CNN具有大量的参数，其损失函数是非凸的，这使得它很难训练。为了在训练中实现快速收敛，避免消失梯度问题，适当的网络初始化是最重要的先决条件之一。偏移参数可以初始化为零，而权值参数应谨慎初始化，以打破同一层隐藏单元之间的对称性。如果网络没有正确初始化，例如，每一层将其输入缩放为k，最终的输出将缩放原始输入为$k^L$，其中L是层数。在这种情况下，$k > 1$的值会导致输出层的值非常大，而$k < 1$的值会导致输出值递减，并且呈梯度化。Krizhevsky等人将其网络的权值从标准差为0.01的零均值高斯分布初始化，并将第2、4、5个卷积层以及所有全连接层的偏差项设为常数1。另一种著名的随机初始化方法是``Xavier''。他们从一个均值为零、方差为$\frac{2}{n_{in}+n_{out}}$的高斯分布中选择权值，其中$n_{in}$为输入该分布的神经元数量，而$n_{out}$为输出结果的神经元数量。因此``Xavier''可以根据输入输出神经元的数量自动确定初始化规模，并通过多层将信号保持在一个合理的值范围内。它在Caffe中的一个变体仅使用了$n_{in}$-only，这使得它更容易实现。``Xavier''初始化方法后来被扩展，以考虑校正的非线性，其中他们推导了一个鲁棒的初始化方法，特别考虑ReLU的非线性。他们的方法允许训练极深的模型使其收敛，而``Xavier''方法却不能。
+
+Saxe等人独立地表明，正交矩阵初始化对于线性网络比高斯初始化更有效，对于非线性网络也同样有效。Mishkin等人将其扩展为一个迭代过程。具体来说，它提出了一种层序单位方差处理方案，可以将其视为只对第一个小批处理执行的标准正交初始化与批标准化相结合(见3.6.4节)。它类似于批量归一化，因为它们都采用了单位方差归一化处理。不同的是，它使用正交归一化来初始化权重，这有助于有效地去相关层活动。这种初始化技术被应用了，而且性能显著提高。
+
+\subsubsection{随机梯度下降}
+反向传播算法是使用梯度下降更新参数的标准训练方法。许多梯度下降优化算法已经被提出。标准梯度下降算法将目标$\mathcal{L}(\theta)$的参数$\theta$更新为$\theta_{t+1} = \theta_t-\eta\nabla_\theta\emph{E}[\mathcal{L}(\theta_t)]$，其中$\emph{E}[\mathcal{L}(\theta_t)]$是$\mathcal{L}(\theta_t)$在整个训练集上的期望，$\eta$是学习率。随机梯度下降(SGD)不是计算$\mathcal{L}(\theta_t)$，而是从训练集中随机选取的单个样例$(x^{(t)},y^{(t)})$估计梯度。
+\begin{equation}
+	\theta_{t+1} = \theta_t-\eta_t\nabla_\theta\mathcal{L}(\theta_t;x^{(t)},y^{(t)})
+\end{equation}
+
+在实践中，SGD中的每个参数更新都是根据一个小批处理计算的，而不是单个示例。这有助于减少参数更新中的方差，并能促使更稳定的收敛。收敛速度由学习率$\eta_t$控制。然而，小批量SGD并不能保证良好的收敛性，仍然存在一些需要解决的挑战。首先，选择一个合适的学习率并不容易。一种常见的方法是使用一个恒定的学习率，在初始阶段给出稳定的收敛，然后随着收敛速度的减慢而降低学习率。另外，学习速率计划被提出用于在训练过程中调整学习率。为了使当前梯度更新依赖于历史批次和加速训练，动量被提出用于在相关方向累加速度矢量。经典的动量更新公式是这样定义的:
+\begin{equation}
+	v_{t+1} = \gamma v_t-\eta_t\nabla_\theta\mathcal{L}(\theta_t;x^{(t)},y^{(t)})
+\end{equation}
+\begin{equation}
+	\theta_{t+1} = \theta_t+v_{t+1}
+\end{equation}
+其中$v_{t+1}$是当前的速度矢量，$\gamma$是动量项，通常设置为0.9。Nesterov动量是在梯度下降优化中使用动量的另一种。
+\begin{equation}
+	v_{t+1} = \gamma v_t-\eta_t\nabla_\theta\mathcal{L}(\theta_t+\gamma v_t;x^{(t)},y^{(t)})
+\end{equation}
+与经典动量先计算当前梯度，然后向更新累加梯度的方向移动相比，Nesterov动量先向先前累积梯度$\gamma v_t$的方向移动，计算梯度，然后进行梯度更新。这种预期的更新可以防止优化进行得太快，从而获得更好的性能。
+
+并行SGD方法改进了SGD，使之适合于并行、大规模机器学习。与标准(同步)SGD不同的是，在标准(同步)SGD中，如果一台机器太慢，训练就会被延迟，这个并行化方法使用异步机制，因此除了最慢的机器上的优化外，没有其他优化会被延迟。Jeffrey Dean等人使用另一种称为Downpour SGD的异步SGD程序来加快具有多个cpu的集群上的大规模分布式训练进程。也有一些工作是使用多个GPU的异步SGD。Paine等人基本上将异步SGD与gpu结合起来，与在单机上训练相比，可以将训练时间缩短几倍。Zhuang等人也使用多个GPU异步计算梯度并更新全局模型参数，在4个GPU上实现的加速比在单个GPU上的快3.2倍。
+
+注意，SGD方法可能不会促使收敛。当性能停止提升时，训练过程可以终止。对过度训练的一个流行的补救方法是使用早期停止，在训练期间，基于验证集的性能停止优化。为了控制训练过程的持续时间，可以考虑不同的停止标准。例如，训练可能执行固定的epoch数，或直到达到预定义的训练错误。停止策略需要谨慎操作，在提高网络泛化能力和避免过拟合的前提下，适当的停止策略应该让训练过程继续进行。
+
+\subsubsection{批量归一化}
+数据归一化通常是数据预处理的第一步。全局数据归一化将所有数据转化为零均值和单位方差。但是，当数据流经深层网络时，输入到内层的分布会发生变化，从而失去网络的学习能力和准确性。Ioffe等人提出了一种有效方法称为批量归一化(Batch Normalization, BN)来部分缓解这一现象。它通过一个归一化步骤来解决所谓的协变量偏移问题，该步骤固定了输入层的均值和方差，其中均值和方差的估计是在每一个小批次后计算的，而不是整个训练集。假设待规格化的层有一个d维输入，即$x = [x_1, x_2,…,x_d]^T$。我们首先将第k维归一化如下:
+\begin{equation}
+	\hat{x}_k = (x_k-\mu_\mathcal{B})/\sqrt{\delta^2_\mathcal{B} + \epsilon}
+\end{equation}
+其中$\mu_\mathcal{B}$和$\delta^2_\mathcal{B}$分别为小批量的均值和方差，$\delta$是一个常数值。为了增强表示能力，将归一化输入$\hat{x}_k$进一步转换为:
+\begin{equation}
+	y_k = BN_{\gamma,\beta}(x_k)=\gamma\hat{x}_k+\beta
+\end{equation}
+其中$\gamma$和$\beta$是学习参数。与全局数据归一化相比，批量归一化具有许多优点。首先，它减少了内部协变量偏移。其次，BN减少了梯度对参数尺度或其初始值的依赖，从而对网络中的梯度流动产生有益的影响。这使得使用更高的学习率，而没有出现分歧的风险。此外，BN正则化了模型，从而减少了Dropout的需要。最后，BN使使用饱和非线性激活函数而不陷入饱和模型成为可能。
+\subsubsection{快捷连接}
+如上所述，通过规一初始化和BN可以缓解深度神经网络的消失梯度问题。尽管这些方法成功地防止了深度神经网络的过拟合，但它们也给网络的优化带来了困难，导致其性能比浅层网络差。这种深层神经网络所遭受的优化问题被视为退化问题。
+
+受长短期记忆(LSTM)网络的启发，该网络使用门函数来确定有多少神经元的激活值要转换或只是通过。Srivastava等人提出了能够以几乎任意深度优化网络的高速网络。其网络的输出是:
+\begin{equation}
+	x_{l+1} = \phi_{l+1}(x_l,W_H)·\tau_{l+1}(x_l,W_T)+x_l·(1-\tau(x_l,W_T))
+\end{equation}
+其中$x_l$和$x_{l+1}$对应第$l^{th}$块的输入和输出，$\tau(·)$是变换门，$\phi(·)$通常是一个仿射变换后的非线性激活函数(通常它也可能采取其他形式)。这种门机制迫使该层的输入和输出具有相同的大小，并允许数十或数百层的高速公路网络进行有效训练。不同的输入样例，门的输出有很大的不同，说明网络不仅学习固定的结构，而且会根据特定的样例动态路由数据。
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+残差网络(ResNets)与LSTM单元中工作的核心思想相同。ResNets中的快捷连接没有门控，未转换的输入直接传播到输出，从而带来更少的参数，而不是为神经元特定的门控使用可学习的权值。ResNets的输出如下所示:
+\begin{equation}
+	x_{l+1}=x_l+f_{l+1}(x_l,W_F)
+\end{equation}
+其中$f_l$是权值层，它可以是卷积、BN、ReLU或池化等操作的复合函数。对于残差块，任何较深单元的激活都可以写成较浅单元激活和残差块函数之和。这也意味着梯度可以直接传播到较浅的单位，这使得深度ResNets比原来的映射函数更容易优化，也更有效地训练非常深的网。这与通常的前馈网络形成了对比，后者的梯度本质上是一系列矩阵-向量乘积，随着网络的深入，它们可能会消失。
 
-\section{总结与展望}\label{sec:Conclusion}
-我们提出了基于全局对比度的显著性计算方法，即基于直方图对比度~(HC) 和基于空间信息增强的区域对比度~(RC)方法。
-HC方法速度快，并且产生细节精确的结果，RC方法可以产生空间增强的高质量显著性图像，但与此同时具有相对较低的计算效率。
-我们在国际上现有最大的公开数据集上测试了我们的方法，并与之前已有八种最好的其它方法进行了比较。
-实验结果表明，我们提出的方法在正确率和召回率上都明显优于其它方法，并且简单而高效。
+在最初的ResNets之后，He等人[123]继续使用另一种ResNets预激活变体，在那里他们进行了一系列实验，以证明快捷连接是网络最容易学习的。他们还发现，将BN前置比在加法后使用BN性能要好得多。在他们的比较中，使用BN + ReLU预激活的残差网比之前的ResNets得到更高的精度。Shen等在卷积层的输出中引入一个加权因子，逐步引入可训练层。最新的Inception-v4论文还报告了通过跨Inception模块使用跳跃连接来加速训练和提高性能。原来的ResNets和预激活ResNets非常深，但也非常薄。而Wide ResNets则提出减小深度，增加宽度，在CIF AR-10、CIF AR-100和SVHN上取得了令人印象深刻的结果。然而，他们的说法并没有在Imagenet dataset\footnote{http://www.image-net.org}上的大规模图像分类任务中得到验证。随机深度ResNets随机丢弃层的子集，并通过每个小批量的映射绕过它们。Singh等人将随机深度ResNets和Dropout结合起来，推广了Dropout和具有随机深度的网络，可以将其视为ResNets、Dropout ResNets和随机深度ResNets的集合。ResNets (RiR)论文中的ResNets描述了一种融合经典卷积网络和残差网络的架构，其中RiR的每个块包含残差单元和非残差块。RiR可以知道每个残差块应该使用多少个卷积层。ResNets of ResNets(RoR)是对ResNets架构的修改，该架构建议使用多级快捷连接，而不是先前在ResNets上的工作中的单层快捷连接。DenseNet可以看作是一种将跳跃连接的洞察力发挥到极致的架构，其中一层的输出连接到该模块中所有后续层。在所有的ResNets中，Highway和Inception网络中，我们可以看到一个相当明显的趋势，即使用捷径连接来帮助训练非常深的网络。
+\section{CNNs的快速处理}
 
-在未来的工作中，我们计划研究包含空间关系且保留详细细节的显著性图像的高效计算算法，
-并且希望研究能够处理具有复杂纹理的背景图像的显著性检测算法，
-以克服我们现有算法在处理这类情况中存在的缺陷。
-最后，我们还希望显著性图像的检测过程中进一步考虑人脸、对称性等高级因素。
-我们相信显著性图像可以应用于高效物体检测\cite{06TCSVT/han_unsupervised}，
-可靠图像分类，鲁棒的图像景物分析~\cite{journal/tog/ChengZMHH10}，
-并提高图像检索效果\cite{tog09/ChenCT_Sketch2Photo}。
+随着计算机视觉和机器学习任务的不断挑战，深度神经网络的模型变得越来越复杂。这些强大的模型需要更多的数据进行训练，以避免过拟合。同时，大的训练数据也带来了新的挑战，如怎样在可行的时间内训练网络。在这一节中，我们将介绍一些CNNs的快速处理方法。
+\subsection{FFT}
+Mathieu等人利用FFTs在傅里叶域进行卷积运算。使用基于FFT的方法有许多优点。首先，滤波器的傅里叶变换可以重复使用，因为滤波器与多幅图像在一个小批量进行卷积。其次，输出梯度的傅里叶变换可以在向滤波器和输入图像反向传播梯度时重用。最后，对输入通道的求和可以在傅里叶域中进行，这样每个图像的每个输出通道只需要进行一次傅里叶逆变换。已经开发了一些基于gpu的库来加快训练和测试过程，比如cuDNN和fbfft。然而，使用FFT进行卷积需要额外的内存来存储傅里叶域的特征映射，因为滤波器必须被填充成与输入相同的大小。当步长参数大于1时，这种代价尤其昂贵，这在许多先进的网络中很常见，如一些论文中的早期层。FFT可以实现更快的训练和测试过程，而小尺寸卷积滤波器的日益突出已经成为CNNs(如ResNet和GoogleNet)的重要组成部分，这使得一种专门针对小尺寸滤波器的新方法:Winograd的最小滤波算法。Winograd的想法类似于FFT，在应用逆变换之前，可以在变换空间中跨通道减少Winograd卷积，从而使推理更加有效。
+\subsection{结构转换}
+低秩矩阵分解在各种情况下被用来改进优化问题。给定一个秩为 $r$的m×n矩阵C，存在一个分解因式$C = AB$，其中A是m×r满列秩矩阵，B是r×n满行秩矩阵。因此，我们可以用A和B来代替C。要将C的参数减少一个分数$p$，必须保证$mr+rn < pmn$，即C的秩应满足$r < pmn/(m + n)$。
+通过这种分解，空间复杂度从$O(mn)$降低到$O(r(m + n))$，时间复杂度从$O(mn)$降低到$O(r(m + n))$。为此，Sainath等人将低秩矩阵分解应用于深度CNN的最终权重层，在精度损失较小的情况下，提高了约30-50\%的训练速度。同样，Xue等人在深度CNN的每一层上应用奇异值分解，使模型规模减少71\%，相对精度损失小于1\%。Denton等人和Jderberg等人受深度神经网络参数冗余的启发，独立研究了卷积滤波器中的冗余，并发展了近似来减少所需的计算。Novikov等人推广了低秩的思想，他们将权矩阵视为多维张量，并应用Tensor-Train分解来减少全连接层的参数数量。
 
 
-\paragraph{致谢.} 本项目受到了国家973计划(2011CB302205)， 国家863计划(2009AA01Z327)，
-国家自然科学基金(U0735001)，以及国家核高基计划(2011ZX01042-001-002)的支持.
-程明明的工作受到了Google PhD fellowship, IBM PhD fellowship, 以及教育部博士研究生学术新人奖的资助。
 
 {\small
 \bibliographystyle{ieee}
